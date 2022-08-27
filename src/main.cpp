@@ -26,6 +26,11 @@ public:
 
 static std::vector<Tile> theMap;
 
+static std::vector<gueepo::TextureRegion*> ourHeroIdleAnimation;
+static int animCurrentFrame = 0;
+static float animTimePerFrame = 0.2f;
+static float animTileElapsed = 0.0f;
+
 bool IsPlayerOnBase() {
 	for (int i = 0; i < theMap.size(); i++) {
 		if (theMap[i].x == ourHeroPosition.x && theMap[i].y == ourHeroPosition.y) {
@@ -60,6 +65,12 @@ public:
 
 		allSprites = gueepo::Texture::Create("./assets/sprites.png");
 		ourHero = new gueepo::TextureRegion(allSprites, 0, 0, 32, 32);
+		ourHeroIdleAnimation.push_back(new gueepo::TextureRegion(allSprites, 0, 0, 32, 32));
+		ourHeroIdleAnimation.push_back(new gueepo::TextureRegion(allSprites, 32, 0, 32, 32));
+		ourHeroIdleAnimation.push_back(new gueepo::TextureRegion(allSprites, 64, 0, 32, 32));
+		ourHeroIdleAnimation.push_back(new gueepo::TextureRegion(allSprites, 96, 0, 32, 32));
+		ourHeroIdleAnimation.push_back(new gueepo::TextureRegion(allSprites, 128, 0, 32, 32));
+
 		groundTexture = new gueepo::TextureRegion(allSprites, 0, 32, 32, 32);
 		baseGroundTexture = new gueepo::TextureRegion(allSprites, 32, 32, 32, 32);
 
@@ -86,7 +97,16 @@ public:
 	}
 
 	void OnDetach() override {}
-	void OnUpdate(float DeltaTime) override {}
+	
+	void OnUpdate(float DeltaTime) override {
+		if (animTileElapsed > animTimePerFrame) {
+			animCurrentFrame = (animCurrentFrame + 1) % ourHeroIdleAnimation.size();
+			animTileElapsed = 0.0f;
+		}
+
+		animTileElapsed += DeltaTime;
+	}
+
 	void OnInput(const gueepo::InputState& currentInputState) override {
 		if (currentInputState.Keyboard.WasKeyPressedThisFrame(gueepo::Keycode::KEYCODE_D)) {
 			ourHeroPosition.x += 1;
@@ -126,7 +146,7 @@ public:
 			xScaleModifier = -1;
 		}
 		batch->Draw(
-			ourHero, ourHeroPosition.x * TILE_SIZE, ourHeroPosition.y * TILE_SIZE, 
+			ourHeroIdleAnimation[animCurrentFrame], ourHeroPosition.x * TILE_SIZE, ourHeroPosition.y * TILE_SIZE,
 			xScaleModifier * TEXTURE_SIZE, TEXTURE_SIZE
 		);
 
