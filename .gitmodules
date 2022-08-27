@@ -1,0 +1,3 @@
+[submodule "src/lib/gueepo2D"]
+	path = src/lib/gueepo2D
+	url = https://github.com/guilhermepo2/gueepo2D.git
