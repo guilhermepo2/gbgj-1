@@ -6,6 +6,7 @@ static gueepo::Texture* allSprites;
 
 static gueepo::TextureRegion* ourHero;
 static gueepo::math::vec2 ourHeroPosition;
+static bool isHeroFacingLeft = true;
 
 static gueepo::TextureRegion* groundTexture;
 static gueepo::TextureRegion* baseGroundTexture;
@@ -89,9 +90,11 @@ public:
 	void OnInput(const gueepo::InputState& currentInputState) override {
 		if (currentInputState.Keyboard.WasKeyPressedThisFrame(gueepo::Keycode::KEYCODE_D)) {
 			ourHeroPosition.x += 1;
+			isHeroFacingLeft = false;
 		}
 		else if (currentInputState.Keyboard.WasKeyPressedThisFrame(gueepo::Keycode::KEYCODE_A)) {
 			ourHeroPosition.x -= 1;
+			isHeroFacingLeft = true;
 		}
 		else if (currentInputState.Keyboard.WasKeyPressedThisFrame(gueepo::Keycode::KEYCODE_W)) {
 			ourHeroPosition.y += 1;
@@ -118,7 +121,14 @@ public:
 			}
 		}
 
-		batch->Draw(ourHero, ourHeroPosition.x * TILE_SIZE, ourHeroPosition.y * TILE_SIZE, TEXTURE_SIZE, TEXTURE_SIZE);
+		int xScaleModifier = 1;
+		if(!isHeroFacingLeft) {
+			xScaleModifier = -1;
+		}
+		batch->Draw(
+			ourHero, ourHeroPosition.x * TILE_SIZE, ourHeroPosition.y * TILE_SIZE, 
+			xScaleModifier * TEXTURE_SIZE, TEXTURE_SIZE
+		);
 
 		batch->End();
 	}
