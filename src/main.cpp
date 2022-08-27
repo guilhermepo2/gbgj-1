@@ -17,6 +17,12 @@ static const int TILE_SIZE = 64;
 
 static const int TEXTURE_SIZE = 64;
 
+// fonts
+static gueepo::Shader* fontShader;
+static gueepo::SpriteBatcher* fontBatcher;
+static gueepo::Font* dogica;
+static gueepo::FontSprite* dogicaFont;
+
 struct Tile {
 public:
 	int x;
@@ -59,9 +65,13 @@ public:
 		gueepo::Renderer::Initialize();
 
 		spriteShader = gueepo::Shader::CreateFromFile("./assets/shaders/sprite.vertex", "./assets/shaders/sprite.fragment");
+		fontShader = gueepo::Shader::CreateFromFile("./assets/shaders/font.vertex", "./assets/shaders/font.fragment");
 
 		batch = new gueepo::SpriteBatcher();
 		batch->Initialize(gueepo::Renderer::GetRendererAPI(), spriteShader);
+
+		fontBatcher = new gueepo::SpriteBatcher();
+		fontBatcher->Initialize(gueepo::Renderer::GetRendererAPI(), fontShader);
 
 		allSprites = gueepo::Texture::Create("./assets/sprites.png");
 		ourHero = new gueepo::TextureRegion(allSprites, 0, 0, 32, 32);
@@ -93,7 +103,11 @@ public:
 		SetBaseOnPosition(3, 3);
 
 		m_Camera = std::make_unique<gueepo::OrtographicCamera>(1280, 720);
-		m_Camera->SetBackgroundColor(0.1f, 0.33f, 0.33f, 1.0f);
+		m_Camera->SetBackgroundColor(0.1f, 0.13f, 0.13f, 1.0f);
+
+		dogica = gueepo::Font::CreateFont("./assets/fonts/dogica.ttf");
+		dogicaFont = new gueepo::FontSprite(dogica, 12);
+		// dogicaFont->SetLineGap(4.0f);
 	}
 
 	void OnDetach() override {}
@@ -151,6 +165,10 @@ public:
 		);
 
 		batch->End();
+
+		fontBatcher->Begin(*m_Camera);
+		fontBatcher->DrawText(dogicaFont, "You got some resources and stuff - just some text", gueepo::math::vec2(-600.0f, -320.0f), 1.0f, gueepo::Color(1.0f, 1.0f, 1.0f, 1.0f));
+		fontBatcher->End();
 	}
 	void OnImGuiRender() override {}
 private:
