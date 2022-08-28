@@ -144,6 +144,10 @@ bool IsPositionValid(int x, int y) {
 	return false;
 }
 
+bool IsPositionValid(gueepo::math::vec2 pos) {
+	return IsPositionValid(static_cast<int>(pos.x), static_cast<int>(pos.y));
+}
+
 void SpawnARandomMonsterInARandomPosition() {
 	// 1. getting a random tile
 	int randomIndex = gueepo::rand::Int() % theMap.size();
@@ -175,6 +179,18 @@ bool IsThereAMonsterOnPosition(int x, int y, int* outIndex = nullptr) {
 	}
 
 	return false;
+}
+
+// todo: move this to the engine, should have a math utils
+int MathUtils_ManhattanDistance(int x1, int y1, int x2, int y2) {
+	return (gueepo::math::abs(x2 - x1) + gueepo::math::abs(y2 - y1));
+}
+
+int MathUtils_ManhattanDistance(gueepo::math::vec2 a, gueepo::math::vec2 b) {
+	return MathUtils_ManhattanDistance(
+		static_cast<int>(a.x), static_cast<int>(a.y),
+		static_cast<int>(b.x), static_cast<int>(b.y)
+	);
 }
 
 // ====================================================================
@@ -304,7 +320,7 @@ public:
 
 		if (playerMoved) {
 			int monsterIndex;
-			if(IsThereAMonsterOnPosition(ourHeroPosition.x, ourHeroPosition.y, &monsterIndex)) {
+			if (IsThereAMonsterOnPosition(ourHeroPosition.x, ourHeroPosition.y, &monsterIndex)) {
 				ourHeroPosition = oldPosition;
 				AddFeedbackText("You killed a monster !!");
 				textCount = timeToTextDisappear;
@@ -314,7 +330,7 @@ public:
 
 			if (DoesTileHaveAResource(ourHeroPosition.x, ourHeroPosition.y)) { // todo: make the player NOT move...
 				ourHeroPosition = oldPosition;
-				
+
 				if (inventoryCount >= maxInventoryCount) {
 					AddFeedbackText("You have plenty of resources!");
 				}
@@ -337,7 +353,7 @@ public:
 					}
 
 					int numResources = 2 + randomNumResource;
-					for(int i = 0; i < numResources; i++) {
+					for (int i = 0; i < numResources; i++) {
 						AssignResourceToRandomTile();
 					}
 
@@ -348,7 +364,7 @@ public:
 						randomInt = -randomInt;
 					}
 					int numMonsters = 2 + randomInt;
-					for(int i = 0; i < numMonsters; i++) {
+					for (int i = 0; i < numMonsters; i++) {
 						SpawnARandomMonsterInARandomPosition();
 					}
 				}
@@ -359,11 +375,52 @@ public:
 				// todo: I *could* make a function that convert numbers to their utf8 and append *THAT*.
 				AddFeedbackText("You've dropped all your resources on the base!");
 				inventoryCount = 0;
-
 			}
+			else { // player moved, but it's not on the base, so we move the enemies...
+				for (int i = 0; i < allMonsters.size(); i++) { // monsters just move towards the player...
+					std::vector<gueepo::math::vec2> validNeighbors;
+					gueepo::math::vec2 leftMove(	allMonsters[i].x - 1,	allMonsters[i].y);
+					gueepo::math::vec2 rightMove(	allMonsters[i].x + 1,	allMonsters[i].y);
+					gueepo::math::vec2 upMove(		allMonsters[i].x,		allMonsters[i].y + 1);
+					gueepo::math::vec2 downMove(	allMonsters[i].x,		allMonsters[i].y - 1);
 
-			// todo: FINALLY! ITS THE MONSTERS TURN !!
-			// just let them move towards the player, and attack the player (they will always miss)
+					if (IsPositionValid(leftMove)) validNeighbors.push_back(leftMove);
+					if (IsPositionValid(rightMove)) validNeighbors.push_back(rightMove);
+					if (IsPositionValid(upMove)) validNeighbors.push_back(upMove);
+					if (IsPositionValid(downMove)) validNeighbors.push_back(downMove);
+
+					if (validNeighbors.size() > 0) {
+						gueepo::math::vec2 chosenMove = validNeighbors[0];
+						int distanceToHero = MathUtils_ManhattanDistance(chosenMove, ourHeroPosition);
+
+						for (int j = 1; j < validNeighbors.size(); j++) {
+							int dist = MathUtils_ManhattanDistance(validNeighbors[j], ourHeroPosition);
+
+							if (dist < distanceToHero) {
+								distanceToHero = dist;
+								chosenMove = validNeighbors[j];
+							}
+						}
+
+						// actually moving!!
+						if (
+							!IsThereAMonsterOnPosition(chosenMove.x, chosenMove.y) &&
+							!DoesTileHaveAResource(chosenMove.x, chosenMove.y)
+							) {
+							allMonsters[i].facingLeft = (chosenMove.x - allMonsters[i].x) < 0 ? true : false;
+
+							if (ourHeroPosition == chosenMove) {
+								AddFeedbackText("A monster attacked you! but it missed...");
+							}
+							else {
+								allMonsters[i].x = chosenMove.x;
+								allMonsters[i].y = chosenMove.y;
+							}							
+						}
+					}
+					
+				}
+			}
 		}
 	}
 	
@@ -392,11 +449,16 @@ public:
 
 		if(!IsPlayerOnBase()) {
 			for(int i = 0; i < allMonsters.size(); i++) {
+				int monsterxScaleModifier = 1;
+				if (!allMonsters[i].facingLeft) {
+					monsterxScaleModifier = -1;
+				}
+
 				batch->Draw(
 					monsterAnimation[animCurrentFrame],
 					allMonsters[i].x * TILE_SIZE,
 					allMonsters[i].y * TILE_SIZE,
-					TEXTURE_SIZE,
+					monsterxScaleModifier * TEXTURE_SIZE,
 					TEXTURE_SIZE
 				);
 			}
