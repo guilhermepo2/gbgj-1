@@ -3,7 +3,6 @@
 /*
 .plan
 1. make the monsters take their turns, they always just move towards the player, and try to attack it (they always miss)
-2. maybe I can have a pool of text elements, and I can draw up to 5, or 10, or whatever... that would be nice...
 */
 
 static gueepo::Shader* spriteShader;
@@ -33,7 +32,7 @@ static gueepo::TextureRegion* monsterSprite;
 static std::vector<Monster> allMonsters;
 
 static const int MAP_WIDTH = 4;
-static const int MAP_HEIGHT = 4;
+static const int MAP_HEIGHT = 3;
 static const int TILE_SIZE = 64;
 
 static const int TEXTURE_SIZE = 64;
@@ -49,9 +48,28 @@ static int currentWave = 0;
 static int inventoryCount = 0;
 static int resourcesOnBaseCount = 0;
 static int maxInventoryCount = 5;
-static gueepo::string feedbackText = "";
+
+// ====================================================================
+// Text feedback stuff
+static std::vector<gueepo::string> feedbackTextVector;
+static const int MAX_FEEDBACK_TEXT = 3;
 static float textCount = 0.0f;
-static float timeToTextDisappear = 5.0f;
+static float timeToTextDisappear = 2.0f;
+
+static void AddFeedbackText(gueepo::string text) {
+	if (feedbackTextVector.size() >= MAX_FEEDBACK_TEXT) {
+		feedbackTextVector.erase(feedbackTextVector.end() - 1);
+	}
+
+	feedbackTextVector.insert(feedbackTextVector.begin(), text);
+	textCount = timeToTextDisappear;
+}
+
+static void RemoveLastText() {
+	if (feedbackTextVector.size() > 0) {
+		feedbackTextVector.erase(feedbackTextVector.end() - 1);
+	}
+}
 
 struct Tile {
 public:
@@ -68,6 +86,8 @@ static int animCurrentFrame = 0;
 static float animTimePerFrame = 0.2f;
 static float animTileElapsed = 0.0f;
 
+// ====================================================================
+// ====================================================================
 bool IsPlayerOnBase() {
 	for (int i = 0; i < theMap.size(); i++) {
 		if (theMap[i].x == ourHeroPosition.x && theMap[i].y == ourHeroPosition.y) {
@@ -205,10 +225,10 @@ public:
 			}
 		}
 
-		SetBaseOnPosition(3, 4);
-		SetBaseOnPosition(4, 4);
-		SetBaseOnPosition(4, 3);
 		SetBaseOnPosition(3, 3);
+		SetBaseOnPosition(4, 3);
+		SetBaseOnPosition(4, 2);
+		SetBaseOnPosition(3, 2);
 
 		m_Camera = std::make_unique<gueepo::OrtographicCamera>(1280, 720);
 		m_Camera->SetBackgroundColor(0.1f, 0.13f, 0.13f, 1.0f);
@@ -240,7 +260,8 @@ public:
 		}
 
 		if (textCount < 0.0f) {
-			feedbackText = "";
+			RemoveLastText();
+			textCount = timeToTextDisappear;
 		}
 
 		animTileElapsed += DeltaTime;
@@ -280,7 +301,7 @@ public:
 			int monsterIndex;
 			if(IsThereAMonsterOnPosition(ourHeroPosition.x, ourHeroPosition.y, &monsterIndex)) {
 				ourHeroPosition = oldPosition;
-				feedbackText = "You killed a monster !!";
+				AddFeedbackText("You killed a monster !!");
 				textCount = timeToTextDisappear;
 
 				allMonsters.erase(allMonsters.begin() + monsterIndex);
@@ -290,11 +311,11 @@ public:
 				ourHeroPosition = oldPosition;
 				
 				if (inventoryCount >= maxInventoryCount) {
-					feedbackText = "You have plenty of resources!";
+					AddFeedbackText("You have plenty of resources!");
 				}
 				else {
 					inventoryCount++;
-					feedbackText = "You got some resources!";
+					AddFeedbackText("You got some resources!");
 				}
 
 				textCount = timeToTextDisappear;
@@ -305,14 +326,23 @@ public:
 					currentWave++;
 
 					ClearAllResources();
-					int numResources = 2 + gueepo::rand::Int() % 2;
+					int randomNumResource = gueepo::rand::Int() % 2;
+					if (randomNumResource < 0) {
+						randomNumResource = -randomNumResource;
+					}
+
+					int numResources = 2 + randomNumResource;
 					for(int i = 0; i < numResources; i++) {
 						AssignResourceToRandomTile();
 					}
 
 					// todo: remove all monsters, and add more!!
 					allMonsters.clear();
-					int numMonsters = 2 + ((gueepo::rand::Int() % currentWave) / 2 );
+					int randomInt = gueepo::rand::Int() % currentWave;
+					if (randomInt < 0) {
+						randomInt = -randomInt;
+					}
+					int numMonsters = 2 + randomInt;
 					for(int i = 0; i < numMonsters; i++) {
 						SpawnARandomMonsterInARandomPosition();
 					}
@@ -322,7 +352,7 @@ public:
 				// todo: there's no easy way to append an integer to the feedback text here...
 				// todo: maybe I can bake that into the string function, like feedbackText.appendNumber(int n)
 				// todo: I *could* make a function that convert numbers to their utf8 and append *THAT*.
-				feedbackText = "You've dropped all your resources on the base!";
+				AddFeedbackText("You've dropped all your resources on the base!");
 				inventoryCount = 0;
 
 			}
@@ -379,7 +409,9 @@ public:
 		batch->End();
 
 		fontBatcher->Begin(*m_Camera);
-		fontBatcher->DrawText(dogicaFont, feedbackText, gueepo::math::vec2(-600.0f, -320.0f), 1.0f, gueepo::Color(1.0f, 1.0f, 1.0f, 1.0f));
+		for (int i = 0; i < feedbackTextVector.size(); i++) {
+			fontBatcher->DrawTextA(dogicaFont, feedbackTextVector[i], gueepo::math::vec2(-600.0f, -320.0f + (i * 30)), 1.0f, gueepo::Color(1.0f, 1.0f, 1.0f, 1.0f));
+		}
 		fontBatcher->End();
 	}
 
