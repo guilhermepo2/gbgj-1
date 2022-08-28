@@ -1,4 +1,11 @@
 #include <gueepo2d.h>
+
+/*
+.plan
+1. make the monsters take their turns, they always just move towards the player, and try to attack it (they always miss)
+2. maybe I can have a pool of text elements, and I can draw up to 5, or 10, or whatever... that would be nice...
+*/
+
 static gueepo::Shader* spriteShader;
 static gueepo::SpriteBatcher* batch;
 
@@ -150,10 +157,13 @@ bool IsThereAMonsterOnPosition(int x, int y, int* outIndex = nullptr) {
 	return false;
 }
 
+// ====================================================================
+// ====================================================================
 class GameLayer : public gueepo::Layer {
 public:
 	GameLayer() : Layer("game layer") {}
 
+	// ----------------------------------------------------------------
 	void OnAttach() override {
 		GUEEPO2D_SCOPED_TIMER("game layer OnAttach");
 		gueepo::Renderer::Initialize();
@@ -217,8 +227,12 @@ public:
 		SpawnARandomMonsterInARandomPosition();
 	}
 
-	void OnDetach() override {}
+	// ----------------------------------------------------------------
+	void OnDetach() override {
+		// todo: clean memory, lmao
+	}
 	
+	// ----------------------------------------------------------------
 	void OnUpdate(float DeltaTime) override {
 		if (animTileElapsed > animTimePerFrame) {
 			animCurrentFrame = (animCurrentFrame + 1) % ourHeroIdleAnimation.size();
@@ -233,6 +247,7 @@ public:
 		textCount -= DeltaTime;
 	}
 
+	// ----------------------------------------------------------------
 	void OnInput(const gueepo::InputState& currentInputState) override {
 		bool playerMoved = false;
 		gueepo::math::vec2 oldPosition = ourHeroPosition;
@@ -311,11 +326,16 @@ public:
 				inventoryCount = 0;
 
 			}
+
+			// todo: FINALLY! ITS THE MONSTERS TURN !!
+			// just let them move towards the player, and attack the player (they will always miss)
 		}
 	}
+	
+	// ----------------------------------------------------------------
 	void OnEvent(gueepo::Event& e) override {}
 
-
+	// ----------------------------------------------------------------
 	void OnRender() override {
 		gueepo::Color bgColor = m_Camera->GetBackGroundColor();
 		gueepo::Renderer::Clear(bgColor.rgba[0], bgColor.rgba[1], bgColor.rgba[2], bgColor.rgba[3]);
@@ -362,17 +382,24 @@ public:
 		fontBatcher->DrawText(dogicaFont, feedbackText, gueepo::math::vec2(-600.0f, -320.0f), 1.0f, gueepo::Color(1.0f, 1.0f, 1.0f, 1.0f));
 		fontBatcher->End();
 	}
+
+	// ----------------------------------------------------------------
 	void OnImGuiRender() override {}
+	
 private:
 	std::unique_ptr<gueepo::OrtographicCamera> m_Camera;
 };
 
+// ====================================================================
+// ====================================================================
 class GBGJ1 : public gueepo::Application {
 public:
 	GBGJ1() : Application("goblin heck", 1280, 720) { PushLayer(new GameLayer()); }
 	~GBGJ1() {}
 };
 
+// ====================================================================
+// ====================================================================
 gueepo::Application* gueepo::CreateApplication() {
 	return new GBGJ1();
 }
