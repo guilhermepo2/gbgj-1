@@ -13,7 +13,17 @@ static gueepo::TextureRegion* baseGroundTexture;
 
 // props
 static gueepo::TextureRegion* resourceRock;
+
+// monsters => a monster is basically just a position...
+// all mosnters are going to have 1 HP
+// the player will have infinite HP
+struct Monster {
+	int x;
+	int y;
+	bool facingLeft;
+};
 static gueepo::TextureRegion* monsterSprite;
+static std::vector<Monster> allMonsters;
 
 static const int MAP_WIDTH = 4;
 static const int MAP_HEIGHT = 4;
@@ -70,10 +80,16 @@ void SetBaseOnPosition(int x, int y) {
 	}
 }
 
+void ClearAllResources() {
+	for(int i = 0; i < theMap.size(); i++) {
+		theMap[i].hasResource = false;
+	}
+}
+
 void AssignResourceToRandomTile() {
 	int randomIndex = gueepo::rand::Int() % theMap.size();
 	int tries = 0;
-	while (tries < 10 && theMap[randomIndex].isBase) {
+	while (tries < 25 && theMap[randomIndex].isBase) {
 		randomIndex = gueepo::rand::Int() % theMap.size();
 		tries++;
 	}
@@ -96,6 +112,39 @@ bool DoesTileHaveAResource(int x, int y) {
 bool IsPositionValid(int x, int y) {
 	if(x >= -MAP_WIDTH && x <= MAP_WIDTH && y >= -MAP_HEIGHT && y <= MAP_HEIGHT) {
 		return true;
+	}
+
+	return false;
+}
+
+void SpawnARandomMonsterInARandomPosition() {
+	// 1. getting a random tile
+	int randomIndex = gueepo::rand::Int() % theMap.size();
+	int tries = 0;
+	while(tries < 25 && (theMap[randomIndex].isBase || theMap[randomIndex].hasResource)) {
+		randomIndex = gueepo::rand::Int() % theMap.size();
+		tries++;
+	}
+
+	if(!theMap[randomIndex].isBase && !theMap[randomIndex].hasResource) { // very unlikely, but hey!
+		Monster m;
+		m.x = theMap[randomIndex].x;
+		m.y = theMap[randomIndex].y;
+		m.facingLeft = true;
+		allMonsters.push_back(m);
+	}
+
+}
+
+bool IsThereAMonsterOnPosition(int x, int y, int* outIndex = nullptr) {
+	for(int i = 0; i < allMonsters.size(); i++) {
+		if(allMonsters[i].x == x && allMonsters[i].y == y) {
+			if(outIndex != nullptr) {
+				(*outIndex) = i;
+			}
+
+			return true;
+		}
 	}
 
 	return false;
@@ -164,6 +213,8 @@ public:
 		}
 
 		// add 1 or 2 monsters?
+		SpawnARandomMonsterInARandomPosition();
+		SpawnARandomMonsterInARandomPosition();
 	}
 
 	void OnDetach() override {}
@@ -211,6 +262,15 @@ public:
 		}
 
 		if (playerMoved) {
+			int monsterIndex;
+			if(IsThereAMonsterOnPosition(ourHeroPosition.x, ourHeroPosition.y, &monsterIndex)) {
+				ourHeroPosition = oldPosition;
+				feedbackText = "You killed a monster !!";
+				textCount = timeToTextDisappear;
+
+				allMonsters.erase(allMonsters.begin() + monsterIndex);
+			}
+
 			if (DoesTileHaveAResource(ourHeroPosition.x, ourHeroPosition.y)) { // todo: make the player NOT move...
 				ourHeroPosition = oldPosition;
 				
@@ -226,15 +286,30 @@ public:
 			}
 
 			if (IsPlayerOnBase()) {
-				if (inventoryCount > maxInventoryCount) {
+				if (inventoryCount >= maxInventoryCount) {
 					currentWave++;
+
+					ClearAllResources();
+					int numResources = 2 + gueepo::rand::Int() % 2;
+					for(int i = 0; i < numResources; i++) {
+						AssignResourceToRandomTile();
+					}
+
+					// todo: remove all monsters, and add more!!
+					allMonsters.clear();
+					int numMonsters = 2 + ((gueepo::rand::Int() % currentWave) / 2 );
+					for(int i = 0; i < numMonsters; i++) {
+						SpawnARandomMonsterInARandomPosition();
+					}
 				}
+
 				resourcesOnBaseCount += inventoryCount;
 				// todo: there's no easy way to append an integer to the feedback text here...
 				// todo: maybe I can bake that into the string function, like feedbackText.appendNumber(int n)
 				// todo: I *could* make a function that convert numbers to their utf8 and append *THAT*.
 				feedbackText = "You've dropped all your resources on the base!";
 				inventoryCount = 0;
+
 			}
 		}
 	}
@@ -257,6 +332,18 @@ public:
 				if (theMap[i].hasResource) {
 					batch->Draw(resourceRock, theMap[i].x * TILE_SIZE, theMap[i].y * TILE_SIZE, TEXTURE_SIZE, TEXTURE_SIZE);
 				}
+			}
+		}
+
+		if(!IsPlayerOnBase()) {
+			for(int i = 0; i < allMonsters.size(); i++) {
+				batch->Draw(
+					monsterSprite,
+					allMonsters[i].x * TILE_SIZE,
+					allMonsters[i].y * TILE_SIZE,
+					TEXTURE_SIZE,
+					TEXTURE_SIZE
+				);
 			}
 		}
 
