@@ -93,6 +93,14 @@ bool DoesTileHaveAResource(int x, int y) {
 	return false;
 }
 
+bool IsPositionValid(int x, int y) {
+	if(x >= -MAP_WIDTH && x <= MAP_WIDTH && y >= -MAP_HEIGHT && y <= MAP_HEIGHT) {
+		return true;
+	}
+
+	return false;
+}
+
 class GameLayer : public gueepo::Layer {
 public:
 	GameLayer() : Layer("game layer") {}
@@ -195,6 +203,11 @@ public:
 		else if (currentInputState.Keyboard.WasKeyPressedThisFrame(gueepo::Keycode::KEYCODE_S)) {
 			ourHeroPosition.y -= 1;
 			playerMoved = true;
+		}
+
+		if(!IsPositionValid(ourHeroPosition.x, ourHeroPosition.y)) {
+			ourHeroPosition = oldPosition;
+			playerMoved = false;
 		}
 
 		if (playerMoved) {
