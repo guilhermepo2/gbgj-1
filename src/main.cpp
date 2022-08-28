@@ -12,6 +12,10 @@ static gueepo::Texture* allSprites;
 
 static gueepo::TextureRegion* ourHero;
 static gueepo::math::vec2 ourHeroPosition;
+static std::vector<gueepo::TextureRegion*> ourHeroIdleAnimation;
+static int animCurrentFrame = 0;
+static float animTimePerFrame = 0.2f;
+static float animTileElapsed = 0.0f;
 static bool isHeroFacingLeft = true;
 
 static gueepo::TextureRegion* groundTexture;
@@ -29,6 +33,7 @@ struct Monster {
 	bool facingLeft;
 };
 static gueepo::TextureRegion* monsterSprite;
+static std::vector<gueepo::TextureRegion*> monsterAnimation;
 static std::vector<Monster> allMonsters;
 
 static const int MAP_WIDTH = 4;
@@ -80,11 +85,6 @@ public:
 };
 
 static std::vector<Tile> theMap;
-
-static std::vector<gueepo::TextureRegion*> ourHeroIdleAnimation;
-static int animCurrentFrame = 0;
-static float animTimePerFrame = 0.2f;
-static float animTileElapsed = 0.0f;
 
 // ====================================================================
 // ====================================================================
@@ -210,6 +210,11 @@ public:
 		baseGroundTexture = new gueepo::TextureRegion(allSprites, 32, 32, 32, 32);
 		resourceRock = new gueepo::TextureRegion(allSprites, 0, 64, 32, 32);
 		monsterSprite = new gueepo::TextureRegion(allSprites, 0, 96, 32, 32);
+		monsterAnimation.push_back(new gueepo::TextureRegion(allSprites, 0, 96, 32, 32));
+		monsterAnimation.push_back(new gueepo::TextureRegion(allSprites, 32, 96, 32, 32));
+		monsterAnimation.push_back(new gueepo::TextureRegion(allSprites, 64, 96, 32, 32));
+		monsterAnimation.push_back(new gueepo::TextureRegion(allSprites, 96, 96, 32, 32));
+		monsterAnimation.push_back(new gueepo::TextureRegion(allSprites, 128, 96, 32, 32));
 
 		ourHeroPosition.x = 0;
 		ourHeroPosition.y = 0;
@@ -388,7 +393,7 @@ public:
 		if(!IsPlayerOnBase()) {
 			for(int i = 0; i < allMonsters.size(); i++) {
 				batch->Draw(
-					monsterSprite,
+					monsterAnimation[animCurrentFrame],
 					allMonsters[i].x * TILE_SIZE,
 					allMonsters[i].y * TILE_SIZE,
 					TEXTURE_SIZE,
